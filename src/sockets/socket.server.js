@@ -2,8 +2,9 @@ const { Server } = require('socket.io');
 const cookie = require('cookie');
 const jwt = require('jsonwebtoken');
 
-const app = require('../app');
+const messageModel = require('../models/message.model');
 const userModel = require('../models/user.model');
+const aiService = require('../services/ai.service');
 
 const initSocketServer = (httpServer) => {
     const io = new Server(httpServer, {});
@@ -11,7 +12,6 @@ const initSocketServer = (httpServer) => {
     // Use "Socket.io Middleware" just to ensure that only logged in user can create socket.io connection
     io.use(async (socket, next) => {
         const cookies = cookie.parse(socket.handshake.headers.cookie || "");
-        console.log(cookies);
         
         // If token not found then pass the request further with an error
         if (!cookies.token) {
@@ -35,6 +35,38 @@ const initSocketServer = (httpServer) => {
     io.on('connection', (socket) => {
         socket.on('ai-message', async (messagePayload) => {
             console.log(messagePayload);
+
+            await messageModel.create({
+                chat: messagePayload.chat,
+                user: socket.user._id,
+                content: messagePayload.content,
+                role: "user"
+            });
+
+            /* Implementation of short term memory (or maintaining chat-history) */
+            const chatHistory = await messageModel.find({
+                chat: messagePayload.chat
+            });
+
+            const response = await aiService.generateResponse(chatHistory.map(chat => {
+                return {
+                    role: chat.role,
+                    parts: [{ text: chat.content }]
+                }
+            }));
+
+            await messageModel.create({
+                chat: messagePayload.chat,
+                user: socket.user._id,
+                content: response,
+                role: "model"
+            });
+
+            socket.emit('ai-response', {
+                content: response,
+                chat: messagePayload.chat
+            });
+
         });
     });
 };

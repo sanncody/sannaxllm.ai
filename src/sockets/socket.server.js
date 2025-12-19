@@ -46,7 +46,9 @@ const initSocketServer = (httpServer) => {
             /* Implementation of short term memory (or maintaining chat-history) */
             const chatHistory = await messageModel.find({
                 chat: messagePayload.chat
-            });
+            }).limit(4).lean();
+
+            console.log(chatHistory);
 
             const response = await aiService.generateResponse(chatHistory.map(chat => {
                 return {

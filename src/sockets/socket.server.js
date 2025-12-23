@@ -48,6 +48,12 @@ const initSocketServer = (httpServer) => {
             /* Saving User message to vectors */
             const vectors = await aiService.generateVector(messagePayload.content);
 
+            const memory = await queryMemory({
+                queryVector: vectors,
+                limit: 3,
+                metadata: {}
+            });
+
             /* Storing the converted vectors into pinecone vector database */
             await createMemory({ 
                 vectors, 
@@ -59,10 +65,11 @@ const initSocketServer = (httpServer) => {
                 }, 
             });
 
+
             /* Implementation of short term memory (or maintaining chat-history) */
             const chatHistory = await messageModel.find({
                 chat: messagePayload.chat
-            }).limit(4).lean();
+            });
 
             const response = await aiService.generateResponse(chatHistory.map(chat => {
                 return {

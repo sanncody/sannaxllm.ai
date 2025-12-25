@@ -50,9 +50,13 @@ const initSocketServer = (httpServer) => {
 
             const memory = await queryMemory({
                 queryVector: vectors,
-                limit: 3,
-                metadata: {}
+                limit: 4,
+                metadata: {
+                    user: socket.user._id
+                }
             });
+
+            console.log(memory);
 
             /* Storing the converted vectors into pinecone vector database */
             await createMemory({ 
@@ -71,12 +75,37 @@ const initSocketServer = (httpServer) => {
                 chat: messagePayload.chat
             });
 
-            const response = await aiService.generateResponse(chatHistory.map(chat => {
+            /* Short Term Memory - Can be used when there is only a single chat and context can be remembered in that chat only */
+            const stm = chatHistory.map(chat => {
                 return {
                     role: chat.role,
                     parts: [{ text: chat.content }]
                 }
-            }));
+            });
+
+            /* Long Term Memory - Can be used when there are multiple chats and context to be used across those chats */
+            const ltm = [
+                {
+                    role: "user", // Update role to system later
+                    parts: [
+                        {
+                            text: `
+                            These are some previous messages from the chat, use them to generate a response
+                            
+                            ${memory.map(context => context.metadata.text)}
+
+                            `
+                        }
+                    ]
+                }
+            ];
+
+            console.log('Long Term Memory: ', ...ltm);
+            console.log();
+            console.log('Short Term Memory: ', ...stm);
+
+            /* We pass both ltm and stm here in order like first we pass ltm and then stm in form of array */
+            const response = await aiService.generateResponse([ ...ltm, ...stm ]);
 
             const responseMessage = await messageModel.create({
                 chat: messagePayload.chat,

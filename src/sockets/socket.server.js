@@ -36,7 +36,6 @@ const initSocketServer = (httpServer) => {
 
     io.on('connection', (socket) => {
         socket.on('ai-message', async (messagePayload) => {
-            console.log(messagePayload);
 
             /* Storing message from user in mongoDB */
             /*const message = await messageModel.create({
@@ -71,8 +70,6 @@ const initSocketServer = (httpServer) => {
                     user: socket.user._id
                 }
             });
-
-            console.log(memory);
 
             /* Storing the converted vectors into pinecone vector database */
             await createMemory({ 
@@ -115,10 +112,6 @@ const initSocketServer = (httpServer) => {
                     ]
                 }
             ];
-
-            console.log('Long Term Memory: ', ...ltm);
-            console.log();
-            console.log('Short Term Memory: ', ...stm);
 
             /* We pass both ltm and stm here in order like first we pass ltm and then stm in form of array */
             const response = await aiService.generateResponse([ ...ltm, ...stm ]);

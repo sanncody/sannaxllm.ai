@@ -38,16 +38,32 @@ const initSocketServer = (httpServer) => {
         socket.on('ai-message', async (messagePayload) => {
             console.log(messagePayload);
 
-            const message = await messageModel.create({
+            /* Storing message from user in mongoDB */
+            /*const message = await messageModel.create({
                 chat: messagePayload.chat,
                 user: socket.user._id,
                 content: messagePayload.content,
                 role: "user"
-            });
+            });*/
 
             /* Saving User message to vectors */
-            const vectors = await aiService.generateVector(messagePayload.content);
+            /*const vectors = await aiService.generateVector(messagePayload.content);*/
 
+
+            /* Optimising storing message in DB and generating vectors of that message by simultaneous executing both using Promise.all()*/
+            /* Promise.all() waits till all the promises get resolved. If saving message in DB takes 2s and generating vectors take 3s, then it waits till 3s for the execution and then proceeds further */
+            const [message, vectors] = await Promise.all([
+                messageModel.create({
+                    chat: messagePayload.chat,
+                    user: socket.user._id,
+                    content: messagePayload.content,
+                    role: "user"
+                }),
+                aiService.generateVector(messagePayload.content)
+            ]);
+
+
+            /* Query Pinecone DB for related memories for implementing LTM further */
             const memory = await queryMemory({
                 queryVector: vectors,
                 limit: 4,

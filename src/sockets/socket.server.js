@@ -131,6 +131,12 @@ const initSocketServer = (httpServer) => {
             /* We pass both ltm and stm here in order like first we pass ltm and then stm in form of array */
             const response = await aiService.generateResponse([ ...ltm, ...stm ]);
 
+            /* We can send AI-response before storing to DB and generating vectors from vector DB, so that user gets response more quickly */
+            socket.emit('ai-response', {
+                content: response,
+                chat: messagePayload.chat
+            });
+
             /*const responseMessage = await messageModel.create({
                 chat: messagePayload.chat,
                 user: socket.user._id,
@@ -161,13 +167,7 @@ const initSocketServer = (httpServer) => {
                     user: socket.user._id
                 },
                 messageId: responseMessage._id
-            })
-
-            socket.emit('ai-response', {
-                content: response,
-                chat: messagePayload.chat
             });
-
         });
     });
 };

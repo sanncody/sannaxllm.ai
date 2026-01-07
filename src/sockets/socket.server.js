@@ -131,15 +131,26 @@ const initSocketServer = (httpServer) => {
             /* We pass both ltm and stm here in order like first we pass ltm and then stm in form of array */
             const response = await aiService.generateResponse([ ...ltm, ...stm ]);
 
-            const responseMessage = await messageModel.create({
+            /*const responseMessage = await messageModel.create({
                 chat: messagePayload.chat,
                 user: socket.user._id,
                 content: response,
                 role: "model"
-            });
+            });*/
 
             /* Conversion of response message to vectors */
-            const responseVectors = await aiService.generateVector(response);
+            /*const responseVectors = await aiService.generateVector(response);*/
+
+            /* Optimising storing AI-response in DB and generating vectors for AI response simultaneously */
+            const [ responseMessage, responseVectors ] = await Promise.all([
+                messageModel.create({
+                    chat: messagePayload.chat,
+                    user: socket.user._id,
+                    content: response,
+                    role: "model"
+                }),
+                aiService.generateVector(response)
+            ]);
 
             /* Storing the response vectors to vector database */
             await createMemory({

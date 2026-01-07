@@ -51,7 +51,7 @@ const initSocketServer = (httpServer) => {
 
             /* Optimising storing message in DB and generating vectors of that message by simultaneous executing both using Promise.all()*/
             /* Promise.all() waits till all the promises get resolved. If saving message in DB takes 2s and generating vectors take 3s, then it waits till 3s for the execution and then proceeds further */
-            const [message, vectors] = await Promise.all([
+            const [ message, vectors ] = await Promise.all([
                 messageModel.create({
                     chat: messagePayload.chat,
                     user: socket.user._id,
@@ -63,17 +63,17 @@ const initSocketServer = (httpServer) => {
 
 
             /* Query Pinecone DB for related memories for implementing LTM further */
-            const memory = await queryMemory({
+            /*const memory = await queryMemory({
                 queryVector: vectors,
                 limit: 4,
                 metadata: {
                     user: socket.user._id
                 }
-            });
+            });*/
 
             /* Storing the converted vectors into pinecone vector database */
             await createMemory({ 
-                vectors, 
+                vectors,
                 messageId: message._id,
                 metadata: {
                     chatId: messagePayload.chat,
@@ -84,9 +84,24 @@ const initSocketServer = (httpServer) => {
 
 
             /* Implementation of short term memory (or maintaining chat-history) */
-            const chatHistory = await messageModel.find({
+            /*const chatHistory = await messageModel.find({
                 chat: messagePayload.chat
-            });
+            });*/
+
+
+            /* Optimising querying from Pinecone DB and fetching chatHistory from DB */
+            const [ memory, chatHistory ] = await Promise.all([
+                queryMemory({
+                    queryVector: vectors,
+                    limit: 4,
+                    metadata: {
+                        user: socket.user._id
+                    }
+                }),
+                messageModel.find({
+                    chat: messagePayload.chat
+                })
+            ]);
 
             /* Short Term Memory - Can be used when there is only a single chat and context can be remembered in that chat only */
             const stm = chatHistory.map(chat => {
